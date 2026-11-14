@@ -42,6 +42,11 @@ android {
         }
     }
     buildTypes {
+        // Debug 构建用独立包名(com.horsemd.app.debug),与已安装的正式版并存,
+        // 避免调试签名无法覆盖正式签名导致的 INSTALL_FAILED_UPDATE_INCOMPATIBLE。
+        debug {
+            applicationIdSuffix ".debug"
+        }
         release {
             if (keystorePropsFile.exists()) {
                 signingConfig signingConfigs.release
