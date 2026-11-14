@@ -22,7 +22,11 @@ import { textareaOffsetAtScrollTop } from '../textarea-metrics.js'
 // Shared heading selector — used by jumpToHeading, the scrollspy, and the list
 // reader. Keeping it in one place ensures they all agree on what counts as a
 // heading (ATX, Setext, and HTML <h1>…<h6> rendered by the editor).
-const HEADING_SEL = '.ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4, .ProseMirror h5, .ProseMirror h6'
+// 双引擎覆盖:.ProseMirror(Milkdown)+ #write(Typora 引擎)。
+const HEADING_SEL = [
+  '.ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4, .ProseMirror h5, .ProseMirror h6',
+  '#write h1, #write h2, #write h3, #write h4, #write h5, #write h6'
+].join(', ')
 const getHeadings = (host) => (host ? [...host.querySelectorAll(HEADING_SEL)] : [])
 
 export function useOutline({ getEditorHost, getSourceTextarea, home, sidebarOpen, sidebarMode, sourceMode, activeId, activeTab, richLoading = false, isMobile, setSidebarOpen, setHome, floating = false }) {

@@ -24,7 +24,7 @@ const normalizePath = (path) => (path || '').replace(/\\/g, '/')
 // raw source occurrences.
 function nearestRichMatchIndex({ api, editorHostRef, term }) {
   try {
-    const root = editorHostRef.current?.querySelector('.ProseMirror')
+    const root = editorHostRef.current?.querySelector('.ProseMirror, #write')
     const view = api.getView?.()
     if (!root || !view) return 0
     const ranges = findRangesInEl(root, term)

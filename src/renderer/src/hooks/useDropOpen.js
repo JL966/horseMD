@@ -27,7 +27,7 @@ const isEmbeddableFile = (file) => {
 }
 
 const hasImageDropInsideEditor = (event) => {
-  if (!event.target?.closest?.('.ProseMirror')) return false
+  if (!event.target?.closest?.('.ProseMirror, #write')) return false
   const items = [...(event.dataTransfer?.items || [])]
   const files = [...(event.dataTransfer?.files || [])]
   return items.some((item) => item.kind === 'file' && MEDIA_TYPE_RE.test(item.type)) ||

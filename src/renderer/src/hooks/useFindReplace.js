@@ -55,7 +55,8 @@ export function useFindReplace({ editorHostRef, sourceRef, editorApis, activeId,
 
   // Discriminate the active view: the source <textarea> sets sourceRef only when
   // it's mounted (source mode or a .txt doc); otherwise we're in the rich editor.
-  const richRoot = () => editorHostRef.current?.querySelector('.ProseMirror') || null
+  // 双引擎:.ProseMirror(Milkdown)或 #write(Typora 引擎)。
+  const richRoot = () => editorHostRef.current?.querySelector('.ProseMirror, #write') || null
   const activeSourceTextarea = () => {
     if (!sourceFindActiveRef.current) return null
     const isVisibleSource = (el) => {
@@ -213,7 +214,15 @@ export function useFindReplace({ editorHostRef, sourceRef, editorApis, activeId,
 
       const view = richView()
       const ranges = findRangesRef.current // Range[]
-      if (!view || !ranges.length) return
+      // Typora 引擎:无 ProseMirror view,由引擎按块文本偏移直接替换
+      if (!view) {
+        const api = editorApis.current[activeId]
+        if (!api?.replaceFindRanges || !ranges.length) return
+        api.replaceFindRanges(ranges, repl, all, i)
+        requestAnimationFrame(() => runFind(q, all ? 0 : i))
+        return
+      }
+      if (!ranges.length) return
       const tr = view.state.tr
       if (all) {
         // Convert every range to positions, then replace bottom-up in ONE

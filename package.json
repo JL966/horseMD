@@ -641,5 +641,9 @@
       "out/main/workspace-watcher-worker.cjs",
       "out/main/chunks/**"
     ]
+  },
+  "allowScripts": {
+    "electron@34.5.8": true,
+    "esbuild@0.25.12": true
   }
 }

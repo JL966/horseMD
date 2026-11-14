@@ -1,0 +1,423 @@
+/* ============================================================
+ * typora-base.css — Typora 引擎宿主契约样式(作用于 horseMD)
+ *
+ * 契约对齐说明:
+ *  - 类名/变量名与 Typora 主题契约一致(md-* 运行时类、CSS 变量面),
+ *    外部 Typora 主题 .css 经 customThemes.js 注入后直接生效。
+ *  - 本文件为全新手写实现,不复制任何 Typora 专有样式文本。
+ *  - 规则全部包在 :where(.hm-typora-engine) 里(零权重):
+ *    * 结构契约(必须存在)压不过任何主题与应用样式;
+ *    * 主题按加载顺序(注入在 head 尾部)覆盖同权重规则 —— 与
+ *      Typora "base 之后加载主题" 的级联语义一致;
+ *    * 变量默认值放 :root(与 Typora base.css 相同模型),主题
+ *      的 :root 变量声明按加载顺序覆盖。
+ *  - 版式接 horseMD 设置面:字号/行高/页宽走 --editor-* 变量,
+ *    主题自己的 #write max-width/padding 依旧优先生效。
+ * ============================================================ */
+
+:root {
+  /* 基础面(主题常覆盖) */
+  --bg-color: #ffffff;
+  --text-color: #333333;
+  --select-text-bg-color: #b5d6ff;
+  --select-text-font-color: inherit;
+  --monospace: var(--hm-font-mono, "JetBrains Mono", "Cascadia Code", Consolas, Menlo, monospace);
+  --primary-color: #4285f4;
+  --side-bar-bg-color: #fafafa;
+  --item-hover-bg-color: #f2f2f2;
+  --control-text-color: #777;
+  /* 语法标记字符面 */
+  --md-char-color: #c7c5c5;
+  --meta-content-color: #5b808d;
+  --heading-char-color: #c7c5c5;
+  --blur-text-color: #c8c8c8;
+  --table-border-color: #dfe2e5;
+  --search-select-bg-color: #ffff00;
+  --focus-ring-color: #59b0ff;
+  --rawblock-edit-panel-bd: #e5e5e5;
+  --link-color: #4183c4;
+  --mark-bg-color: #ffff00;
+  --code-bg-color: rgba(0, 0, 0, 0.04);
+}
+
+/* ------------------------------------------------------------
+ * 内容容器契约:宽度决定权留给主题(max-width 由主题给;
+ * 无主题时回退到 horseMD 页宽设置)
+ * ------------------------------------------------------------ */
+:where(.hm-typora-engine) {
+  margin: 0 auto;
+  min-height: 100vh;
+  padding: 36px 30px 90px;
+  position: relative;
+  width: inherit;
+  max-width: var(--editor-max-width, 800px);
+  word-break: normal;
+  word-wrap: break-word;
+  white-space: normal;
+  overflow-x: visible;
+  outline: none;
+  caret-color: currentColor;
+  color: inherit;
+}
+:where(.hm-typora-engine):after { content: ""; display: block; height: 0; font-size: 0; }
+
+/* 无自定义主题:版式(字号/行高)跟随 horseMD 设置面。
+ * 有自定义主题(Typora .css)时让位 —— 主题的 html/body 规则
+ * 继承下来接管版式(与 Typora "主题覆盖 base" 一致),且编辑区
+ * 背景/文字色取主题变量面(github.css 等主题不定义 --bg-color
+ * 时落到 :root 默认白底,与 Typora base 行为一致)。 */
+body:not(.hm-has-custom-theme) .editor-scroll.hm-engine-typora :where(.hm-typora-engine) {
+  font-size: var(--editor-font-size, 16px);
+  line-height: var(--editor-line-height, 1.85);
+}
+body.hm-has-custom-theme .editor-scroll.hm-engine-typora {
+  background-color: var(--bg-color, #fff);
+  color: var(--text-color, inherit);
+}
+
+/* 引擎宿主包裹层:自己不参与几何,#write 全权决定宽度 */
+:where(.hm-typora-host) { min-height: 100%; }
+
+/* ------------------------------------------------------------
+ * 块级契约
+ * ------------------------------------------------------------ */
+:where(.hm-typora-engine) .md-heading,
+:where(.hm-typora-engine) .md-p,
+:where(.hm-typora-engine) .md-table { white-space: pre-wrap; }
+
+:where(.hm-typora-engine) h1,
+:where(.hm-typora-engine) h2,
+:where(.hm-typora-engine) h3,
+:where(.hm-typora-engine) h4,
+:where(.hm-typora-engine) h5,
+:where(.hm-typora-engine) h6,
+:where(.hm-typora-engine) p,
+:where(.hm-typora-engine) pre {
+  width: inherit;
+  position: relative;
+}
+:where(.hm-typora-engine) h1,
+:where(.hm-typora-engine) h2,
+:where(.hm-typora-engine) h3,
+:where(.hm-typora-engine) h4,
+:where(.hm-typora-engine) h5,
+:where(.hm-typora-engine) h6,
+:where(.hm-typora-engine) p,
+:where(.hm-typora-engine) .md-math-block,
+:where(.hm-typora-engine) .md-rawblock {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+:where(.hm-typora-engine) .md-p:empty:after,
+:where(.hm-typora-engine) h1:empty:after,
+:where(.hm-typora-engine) h2:empty:after,
+:where(.hm-typora-engine) h3:empty:after,
+:where(.hm-typora-engine) h4:empty:after,
+:where(.hm-typora-engine) h5:empty:after,
+:where(.hm-typora-engine) h6:empty:after {
+  content: "\200B";
+}
+/* 标题聚焦时左侧显示 ATX 前缀(render 在 data-prefix 存 "# "),贴近 Typora */
+:where(.hm-typora-engine) h1.md-focus:before,
+:where(.hm-typora-engine) h2.md-focus:before,
+:where(.hm-typora-engine) h3.md-focus:before,
+:where(.hm-typora-engine) h4.md-focus:before,
+:where(.hm-typora-engine) h5.md-focus:before,
+:where(.hm-typora-engine) h6.md-focus:before {
+  color: var(--heading-char-color);
+  position: absolute;
+  right: 100%;
+  opacity: .55;
+  font-size: .8em;
+  font-family: var(--monospace);
+  content: attr(data-prefix);
+}
+
+/* 标题 # 字符(render 暂以 data-prefix 挂载,聚焦时显示) */
+:where(.hm-typora-engine) .md-heading.md-focus:before {
+  color: var(--md-char-color);
+  opacity: 1;
+}
+:where(.hm-typora-engine) .md-attr { display: none; }
+:where(.hm-typora-engine) .md-heading.md-focus > .md-attr,
+:where(.hm-typora-engine) .md-header-span .md-attr.md-expand {
+  display: inline;
+  color: var(--md-char-color);
+}
+
+/* 引用 */
+:where(.hm-typora-engine) blockquote {
+  margin: 1rem 0;
+  padding: 0 1em;
+  color: inherit;
+  border-left: .25em solid var(--table-border-color);
+}
+:where(.hm-typora-engine) blockquote > *:first-child { margin-top: 0; }
+:where(.hm-typora-engine) blockquote > *:last-child { margin-bottom: 0; }
+
+/* 列表 */
+:where(.hm-typora-engine) ul,
+:where(.hm-typora-engine) ol { position: relative; padding-left: 2em; }
+:where(.hm-typora-engine) li > p { margin: 0; }
+:where(.hm-typora-engine) .md-task-list-item { position: relative; list-style-type: none; }
+:where(.hm-typora-engine) .md-task-list-item > input[type="checkbox"] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin-left: -1.2em;
+  margin-top: calc(1em - 10px);
+  border: none;
+  cursor: pointer;
+  width: inherit;
+  height: inherit;
+}
+:where(.hm-typora-engine) .task-list-done { color: var(--blur-text-color); }
+
+/* 分隔线 */
+:where(.hm-typora-engine) .md-hr { cursor: default; }
+:where(.hm-typora-engine) .md-hr:focus { outline: var(--focus-ring-color) auto 3px; }
+:where(.hm-typora-engine) .md-hr hr {
+  border: none;
+  border-top: 2px solid var(--table-border-color);
+  margin: 1.5em 0;
+}
+
+/* YAML front matter */
+:where(.hm-typora-engine) pre.md-meta-block {
+  font-size: .8rem;
+  min-height: .8rem;
+  white-space: pre-wrap;
+  background: var(--code-bg-color);
+  display: block;
+  overflow-x: hidden;
+  padding: .5em;
+  border-radius: 3px;
+}
+:where(.hm-typora-engine) pre.md-meta-block:empty:before { content: "YAML Front Matter"; opacity: .4; }
+:where(.hm-typora-engine) .md-blockmeta { color: var(--md-char-color); font-weight: 700; font-style: italic; }
+
+/* TOC */
+:where(.hm-typora-engine) .md-toc-item { display: block; color: var(--link-color); }
+:where(.hm-typora-engine) .md-toc-h1 .md-toc-inner { margin-left: 0; }
+:where(.hm-typora-engine) .md-toc-h2 .md-toc-inner { margin-left: 2em; }
+:where(.hm-typora-engine) .md-toc-h3 .md-toc-inner { margin-left: 4em; }
+:where(.hm-typora-engine) .md-toc-h4 .md-toc-inner { margin-left: 6em; }
+:where(.hm-typora-engine) .md-toc-h5 .md-toc-inner { margin-left: 8em; }
+:where(.hm-typora-engine) .md-toc-h6 .md-toc-inner { margin-left: 10em; }
+
+/* GFM alert(基础色,主题可覆盖) */
+:where(.hm-typora-engine) .md-alert { padding: 0 1em; margin: 1rem 0; color: inherit; border-left: .25em solid #000; }
+:where(.hm-typora-engine) .md-alert.md-alert-note { border-left-color: #0969da; }
+:where(.hm-typora-engine) .md-alert.md-alert-important { border-left-color: #8250df; }
+:where(.hm-typora-engine) .md-alert.md-alert-warning { border-left-color: #9a6700; }
+:where(.hm-typora-engine) .md-alert.md-alert-tip { border-left-color: #1a7f37; }
+:where(.hm-typora-engine) .md-alert.md-alert-caution { border-left-color: #cf222e; }
+:where(.hm-typora-engine) .md-alert > *:first-child { margin-top: 0; }
+:where(.hm-typora-engine) .md-alert > *:last-child { margin-bottom: 0; }
+:where(.hm-typora-engine) .md-alert-text-note { font-weight: 700; color: #0969da; }
+:where(.hm-typora-engine) .md-alert-text-important { font-weight: 700; color: #8250df; }
+:where(.hm-typora-engine) .md-alert-text-warning { font-weight: 700; color: #9a6700; }
+:where(.hm-typora-engine) .md-alert-text-tip { font-weight: 700; color: #1a7f37; }
+:where(.hm-typora-engine) .md-alert-text-caution { font-weight: 700; color: #cf222e; }
+
+/* 表格 */
+:where(.hm-typora-engine) figure {
+  overflow-x: auto;
+  margin: 1rem 0;
+  max-width: calc(100% + 16px);
+}
+:where(.hm-typora-engine) figure > table { margin: 0; }
+:where(.hm-typora-engine) table.md-table { border-collapse: collapse; white-space: pre-wrap; }
+:where(.hm-typora-engine) table.md-table th,
+:where(.hm-typora-engine) table.md-table td {
+  border: 1px solid var(--table-border-color);
+  padding: 6px 13px;
+  min-width: 32px;
+}
+:where(.hm-typora-engine) table.md-table th { font-weight: 600; background: var(--code-bg-color); }
+:where(.hm-typora-engine) .td-span { display: inline-block; min-width: 1ch; width: 100%; min-height: 10px; }
+:where(.hm-typora-engine) .td-span:empty:after { content: " "; }
+
+/* 脚注 */
+:where(.hm-typora-engine) .md-footnote { color: var(--link-color); cursor: pointer; }
+
+/* 代码块契约: pre.md-fences[lang] */
+:where(.hm-typora-engine) pre { white-space: pre-wrap; }
+:where(.hm-typora-engine) .md-fences {
+  font-size: .9rem;
+  position: relative !important;
+  display: block;
+  text-align: left;
+  overflow: visible;
+  white-space: pre;
+  background: inherit;
+  border-radius: 3px;
+  padding: 8px 0;
+  margin: 1rem 0;
+  page-break-inside: avoid;
+}
+:where(.hm-typora-engine) .md-fences .code-mirror-shim {
+  font-family: var(--monospace);
+  tab-size: 4;
+  outline: none;
+  white-space: pre;
+}
+/* 代码块语言标头(非编辑区, 类似 Typora 的 code-tooltip) */
+:where(.hm-typora-engine) .md-fences .fences-header {
+  position: absolute;
+  top: -1.6em;
+  left: 0;
+  font-size: .8em;
+  color: var(--md-char-color);
+  font-family: var(--monospace);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s;
+}
+:where(.hm-typora-engine) .md-fences.md-focus .fences-header,
+:where(.hm-typora-engine) .md-fences:hover .fences-header { opacity: 1; }
+
+/* 代码高亮: cm-s-inner 命名空间(主题覆盖锚点) */
+:where(.hm-typora-engine) .cm-s-inner { background: inherit; color: inherit; }
+:where(.hm-typora-engine) .cm-s-inner .cm-keyword { color: #708; }
+:where(.hm-typora-engine) .cm-s-inner .cm-atom { color: #219; }
+:where(.hm-typora-engine) .cm-s-inner .cm-number { color: #164; }
+:where(.hm-typora-engine) .cm-s-inner .cm-def { color: #00f; }
+:where(.hm-typora-engine) .cm-s-inner .cm-variable { color: inherit; }
+:where(.hm-typora-engine) .cm-s-inner .cm-variable-2 { color: #05a; }
+:where(.hm-typora-engine) .cm-s-inner .cm-variable-3,
+:where(.hm-typora-engine) .cm-s-inner .cm-type { color: #085; }
+:where(.hm-typora-engine) .cm-s-inner .cm-property { color: inherit; }
+:where(.hm-typora-engine) .cm-s-inner .cm-operator { color: inherit; }
+:where(.hm-typora-engine) .cm-s-inner .cm-comment { color: #a50; }
+:where(.hm-typora-engine) .cm-s-inner .cm-string { color: #a11; }
+:where(.hm-typora-engine) .cm-s-inner .cm-string-2 { color: #a11; }
+:where(.hm-typora-engine) .cm-s-inner .cm-meta { color: #555; }
+:where(.hm-typora-engine) .cm-s-inner .cm-qualifier { color: #555; }
+:where(.hm-typora-engine) .cm-s-inner .cm-builtin { color: #30a; }
+:where(.hm-typora-engine) .cm-s-inner .cm-bracket { color: #997; }
+:where(.hm-typora-engine) .cm-s-inner .cm-tag { color: #170; }
+:where(.hm-typora-engine) .cm-s-inner .cm-attribute { color: #00c; }
+:where(.hm-typora-engine) .cm-s-inner .cm-header { color: inherit; font-weight: 700; }
+:where(.hm-typora-engine) .cm-s-inner .cm-link { color: var(--link-color); }
+:where(.hm-typora-engine) .cm-s-inner .cm-error { color: #f00; }
+
+/* ------------------------------------------------------------
+ * 内联契约:语法标记字符包在 .md-meta / .md-content 中,
+ * 默认隐藏,光标进入(.md-expand)时显示 —— live preview 的核心机制
+ * ------------------------------------------------------------ */
+:where(.hm-typora-engine) .md-meta { display: none; color: var(--md-char-color); }
+:where(.hm-typora-engine) .md-content { display: none; color: var(--meta-content-color); }
+:where(.hm-typora-engine) .md-empty .md-meta,
+:where(.hm-typora-engine) .md-expand .md-content,
+:where(.hm-typora-engine) .md-expand .md-meta,
+:where(.hm-typora-engine) .md-expand.md-content,
+:where(.hm-typora-engine) .md-expand.md-meta,
+:where(.hm-typora-engine) .md-tmp-expand .md-meta,
+:where(.hm-typora-engine) .md-tmp-expand.md-meta,
+:where(.hm-typora-engine) .md-search-expand .md-meta,
+:where(.hm-typora-engine) .md-search-expand.md-meta {
+  display: inline;
+  opacity: inherit;
+  width: auto;
+}
+:where(.hm-typora-engine) .md-expand-on-selection .md-meta { display: inline; }
+:where(.hm-typora-engine) .md-entity > .md-meta,
+:where(.hm-typora-engine) sub > .md-meta,
+:where(.hm-typora-engine) sup > .md-meta {
+  display: inline-block;
+  width: 0;
+  opacity: 0;
+}
+:where(.hm-typora-engine) .md-plain { white-space: pre-wrap; }
+
+/* 链接/图片 */
+:where(.hm-typora-engine) [md-inline="link"] > a { color: var(--link-color); }
+:where(.hm-typora-engine) .md-url { text-decoration: underline; cursor: pointer; }
+:where(.hm-typora-engine) .md-link-title { color: inherit; opacity: .8; font-style: italic; }
+:where(.hm-typora-engine) [md-inline="url"],
+:where(.hm-typora-engine) [md-inline="link"] > .md-content,
+:where(.hm-typora-engine) [md-inline="image"] > .md-meta { word-break: break-all; }
+:where(.hm-typora-engine) .md-image {
+  min-width: 10px;
+  min-height: 10px;
+  position: relative;
+  word-break: break-all;
+  font-family: var(--monospace);
+}
+:where(.hm-typora-engine) .md-image > .md-meta { color: #5b469b; padding-left: 5px; font-size: .9em; }
+:where(.hm-typora-engine) .md-image img {
+  max-width: 100%;
+  vertical-align: middle;
+  display: inline-block;
+}
+:where(.hm-typora-engine) .md-image.md-img-loaded:not(.md-expand) > .md-meta { display: none; }
+:where(.hm-typora-engine) .md-image.md-img-error img { opacity: .3; }
+:where(.hm-typora-engine) .md-image.md-img-error:after {
+  content: "\26A0";
+  color: #c33;
+}
+
+/* 行内代码 */
+:where(.hm-typora-engine) code,
+:where(.hm-typora-engine) tt {
+  font-family: var(--monospace);
+  background: var(--code-bg-color);
+  border-radius: 3px;
+  padding: .2em .35em;
+  font-size: .9em;
+}
+
+/* 行内公式(TeX 源直显;接入 KaTeX 后由脚本替换) */
+:where(.hm-typora-engine) .md-inline-math { display: inline-block; }
+:where(.hm-typora-engine) .md-inline-math .md-meta { font-family: var(--monospace); }
+:where(.hm-typora-engine) .md-inline-math .math-display { display: inline-block; }
+:where(.hm-typora-engine) .md-expand .md-inline-math .math-display { display: none; }
+:where(.hm-typora-engine) .md-expand .md-inline-math .md-meta { display: inline; }
+
+/* 换行 */
+:where(.hm-typora-engine) .md-linebreak-mark,
+:where(.hm-typora-engine) .md-tag,
+:where(.hm-typora-engine) [md-inline="linebreak"] {
+  font-family: var(--monospace);
+  opacity: .6;
+  color: inherit;
+}
+
+/* emoji / entity */
+:where(.hm-typora-engine) .md-emoji-span:before { content: attr(data-emoji); }
+:where(.hm-typora-engine) .md-entity:before { content: attr(data-content); }
+
+/* 下标/上标/高亮 */
+:where(.hm-typora-engine) sub,
+:where(.hm-typora-engine) sup { font-size: .75em; line-height: 0; }
+:where(.hm-typora-engine) mark {
+  background: var(--mark-bg-color);
+  color: inherit;
+  padding: 0 .1em;
+}
+
+/* 选区 */
+:where(.hm-typora-engine) ::selection {
+  background: var(--select-text-bg-color);
+  color: var(--select-text-font-color);
+}
+
+/* 搜索命中(宿主查找高亮可直接挂这些类) */
+:where(.hm-typora-engine) .md-search-hit { background: rgba(255, 213, 79, .6); }
+:where(.hm-typora-engine) .md-search-select { background: var(--search-select-bg-color); }
+
+/* 数学块面板(TeX 源编辑区) */
+:where(.hm-typora-engine) .md-rawblock-container { position: relative; }
+:where(.hm-typora-engine) .md-rawblock-control {
+  color: var(--md-char-color);
+  font-family: var(--monospace);
+  font-size: .9em;
+  user-select: none;
+}
+:where(.hm-typora-engine) .md-rawblock-input {
+  font-family: var(--monospace);
+  outline: none;
+  white-space: pre-wrap;
+}
+:where(.hm-typora-engine) .md-rawblock-input:empty:before { content: "\200B"; }

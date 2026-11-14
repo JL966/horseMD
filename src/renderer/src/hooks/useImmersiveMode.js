@@ -78,7 +78,7 @@ function revealRoom() {
   const pane = document.querySelector('.app .pane-left:not(.collapsed)')
   const activity = document.querySelector('.app .activity-bar')
   const cover = (activity?.offsetWidth || 0) + (pane?.offsetWidth || 0)
-  const text = [...centre.querySelectorAll('.ProseMirror, textarea.source-editor')].find((node) => node.offsetParent)
+  const text = [...centre.querySelectorAll('.ProseMirror, #write, textarea.source-editor')].find((node) => node.offsetParent)
   if (!text) return { centre, cover, shift: 0, inset: 0 }
   // Without what is applied right now (the slide animates: read its current
   // value) — the plain position of the characters.

@@ -1423,6 +1423,7 @@ export default function App() {
             markdownSyntax={markdownSyntax}
             selectionToolbar={settings.selectionToolbar}
             readOnly={readOnly}
+            editorEngine={settings.editorEngine === 'milkdown' ? 'milkdown' : 'typora'}
             effectiveKeybindings={effectiveKeybindings}
             editorAreaRef={editorAreaRef}
             editorHostRef={editorHostRef}

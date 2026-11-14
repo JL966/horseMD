@@ -165,6 +165,10 @@ export const writeFontStack = (latin, cjk) => {
 }
 
 export const DEFAULT_SETTINGS = {
+  // 编辑器内核:'typora'(自研 Typora 架构引擎,#write 契约 DOM,主题直用)
+  // 或 'milkdown'(Crepe/ProseMirror,功能最全的兜底)。切换后所有富文本
+  // 编辑器按新内核重挂载(key 含引擎名)。
+  editorEngine: 'typora',
   // Manual keeps the selected built-in/imported theme unchanged. System chooses
   // one of the saved built-in day/night themes when the OS appearance changes.
   themeMode: 'manual',
@@ -293,6 +297,7 @@ export function loadSettings() {
   try {
     const raw = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')
     return {
+      editorEngine: raw.editorEngine === 'milkdown' ? 'milkdown' : 'typora',
       themeMode: raw.themeMode === 'system' ? 'system' : 'manual',
       systemLightTheme: normalizeThemeId(raw.systemLightTheme, 'light'),
       systemDarkTheme: normalizeThemeId(raw.systemDarkTheme, 'dark'),

@@ -1,0 +1,124 @@
+/* ============================================================
+ * typora-theme-default.css — Typora 引擎内置默认主题(GitHub 风格,全新手写)
+ *
+ * 作用域:全部规则包 :where(.hm-typora-engine)(零权重),在
+ * typora-base.css 之后加载 —— 内置默认值可被随后注入的用户
+ * Typora 主题(customThemes.js,head 尾部)按加载顺序覆盖;
+ * 主题里更弱的单元素选择器(h1/p{…})也因后加载而胜出。
+ * 变量仍放 :root:与 Typora "主题 :root 变量覆盖 base" 的模型一致。
+ * ============================================================ */
+
+:root {
+  --bg-color: #ffffff;
+  --side-bar-bg-color: #f6f8fa;
+  --control-text-color: #57606a;
+  --primary-color: #0969da;
+  --text-color: #1f2328;
+  --select-text-bg-color: rgba(84, 158, 255, 0.35);
+  --item-hover-bg-color: #eff2f5;
+  --rawblock-edit-panel-bd: #d0d7de;
+  --table-border-color: #d0d7de;
+  --link-color: #0969da;
+  --code-bg-color: rgba(129, 139, 152, 0.12);
+  --md-char-color: #a8b3bd;
+  --meta-content-color: #6e7781;
+  --heading-char-color: #a8b3bd;
+  --mark-bg-color: #fff8c5;
+}
+
+:where(.hm-typora-engine) {
+  max-width: 860px;
+  padding: 32px 36px 120px;
+  color: var(--text-color);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC",
+    "Microsoft YaHei", Helvetica, Arial, sans-serif;
+  line-height: 1.6;
+}
+@media only screen and (min-width: 1400px) {
+  :where(.hm-typora-engine) { max-width: 980px; }
+}
+
+/* 标题层级 */
+:where(.hm-typora-engine) h1,
+:where(.hm-typora-engine) h2,
+:where(.hm-typora-engine) h3,
+:where(.hm-typora-engine) h4,
+:where(.hm-typora-engine) h5,
+:where(.hm-typora-engine) h6 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin-top: 1.5em;
+  margin-bottom: .6em;
+}
+:where(.hm-typora-engine) h1 { font-size: 2em; border-bottom: 1px solid var(--table-border-color); padding-bottom: .3em; }
+:where(.hm-typora-engine) h2 { font-size: 1.5em; border-bottom: 1px solid var(--table-border-color); padding-bottom: .3em; }
+:where(.hm-typora-engine) h3 { font-size: 1.25em; }
+:where(.hm-typora-engine) h4 { font-size: 1em; }
+:where(.hm-typora-engine) h5 { font-size: .875em; }
+:where(.hm-typora-engine) h6 { font-size: .85em; color: #57606a; }
+
+:where(.hm-typora-engine) p { margin: 0 0 1em; }
+
+/* 链接 */
+:where(.hm-typora-engine) a { color: var(--link-color); text-decoration: none; }
+:where(.hm-typora-engine) a:hover { text-decoration: underline; }
+
+/* 列表 */
+:where(.hm-typora-engine) ul ul,
+:where(.hm-typora-engine) ul ol,
+:where(.hm-typora-engine) ol ol,
+:where(.hm-typora-engine) ol ul { margin: .25em 0; }
+
+/* 行内代码 */
+:where(.hm-typora-engine) code,
+:where(.hm-typora-engine) tt {
+  background: var(--code-bg-color);
+  padding: .2em .4em;
+  border-radius: 6px;
+  font-size: .85em;
+}
+
+/* 代码块 */
+:where(.hm-typora-engine) .md-fences { background: var(--side-bar-bg-color); padding: 12px 0; }
+:where(.hm-typora-engine) .md-fences .code-mirror-shim { padding: 0 16px; line-height: 1.45; }
+
+/* 表格 */
+:where(.hm-typora-engine) table.md-table th,
+:where(.hm-typora-engine) table.md-table td { padding: 6px 13px; }
+:where(.hm-typora-engine) table.md-table tr { background: var(--bg-color); border-top: 1px solid var(--table-border-color); }
+:where(.hm-typora-engine) table.md-table tr:nth-child(2n) { background: var(--side-bar-bg-color); }
+:where(.hm-typora-engine) table.md-table th { background: var(--side-bar-bg-color); }
+
+/* 引用 */
+:where(.hm-typora-engine) blockquote { color: #59636e; border-left-color: var(--table-border-color); }
+
+/* 分隔线 */
+:where(.hm-typora-engine) .md-hr hr { border-top: 3px solid var(--table-border-color); }
+
+/* YAML front matter */
+:where(.hm-typora-engine) pre.md-meta-block { background: var(--side-bar-bg-color); }
+
+/* 代码高亮(cm-s-inner 契约,GitHub 风格配色) */
+:where(.hm-typora-engine) .cm-s-inner .cm-keyword { color: #cf222e; font-weight: 600; }
+:where(.hm-typora-engine) .cm-s-inner .cm-def { color: #8250df; }
+:where(.hm-typora-engine) .cm-s-inner .cm-variable { color: #953800; }
+:where(.hm-typora-engine) .cm-s-inner .cm-variable-2 { color: #0550ae; }
+:where(.hm-typora-engine) .cm-s-inner .cm-variable-3,
+:where(.hm-typora-engine) .cm-s-inner .cm-type { color: #116329; }
+:where(.hm-typora-engine) .cm-s-inner .cm-string { color: #0a3069; }
+:where(.hm-typora-engine) .cm-s-inner .cm-string-2 { color: #0a3069; }
+:where(.hm-typora-engine) .cm-s-inner .cm-number { color: #0550ae; }
+:where(.hm-typora-engine) .cm-s-inner .cm-atom { color: #0550ae; }
+:where(.hm-typora-engine) .cm-s-inner .cm-comment { color: #6e7781; font-style: italic; }
+:where(.hm-typora-engine) .cm-s-inner .cm-meta { color: #0550ae; }
+:where(.hm-typora-engine) .cm-s-inner .cm-tag { color: #116329; }
+:where(.hm-typora-engine) .cm-s-inner .cm-attribute { color: #0550ae; }
+:where(.hm-typora-engine) .cm-s-inner .cm-builtin { color: #8250df; }
+:where(.hm-typora-engine) .cm-s-inner .cm-bracket { color: #57606a; }
+:where(.hm-typora-engine) .cm-s-inner .cm-error { color: #cf222e; }
+
+/* 图片 */
+:where(.hm-typora-engine) .md-image img { border-radius: 3px; }
+
+/* 任务列表 */
+:where(.hm-typora-engine) .task-list-done { text-decoration: line-through; }

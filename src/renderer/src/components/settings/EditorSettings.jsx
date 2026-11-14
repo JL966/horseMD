@@ -9,6 +9,30 @@ export default function EditorSettings({
   return (
     <>
       <section className="settings-block">
+        <h2 className="settings-block-title">{t('settings.engine')}</h2>
+        <div className="settings-row">
+          <div className="settings-row-text">
+            <div className="settings-row-label">{t('settings.editorEngine')}</div>
+            <div className="settings-row-desc">{t('settings.editorEngineDesc')}</div>
+          </div>
+          <div className="settings-segmented">
+            {[
+              { id: 'typora', label: t('settings.engineTypora') },
+              { id: 'milkdown', label: t('settings.engineMilkdown') }
+            ].map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                className={`settings-segmented-option${(settings.editorEngine || 'typora') === opt.id ? ' active' : ''}`}
+                onClick={() => onUpdateSettings({ editorEngine: opt.id })}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+      <section className="settings-block">
         <h2 className="settings-block-title">{t('settings.proofreading')}</h2>
         <div className="settings-row">
           <div className="settings-row-text">

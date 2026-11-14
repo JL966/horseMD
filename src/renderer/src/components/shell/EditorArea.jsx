@@ -20,6 +20,8 @@ import { attachSourceCaret } from '../editor-source-caret.js'
 import { updateTextareaSourceFromDom } from '../../source-text-fidelity.js'
 
 const Editor = lazy(() => import('../Editor.jsx'))
+// Typora 引擎宿主(自研内核,轻量,直接静态引入;Milkdown 才是重 lazy 块)
+import TyporaEditor from '../TyporaEditor.jsx'
 
 const editorChunkFallback = (
   <div className="editor-skeleton" aria-hidden="true">
@@ -51,6 +53,7 @@ export default function EditorArea({
   markdownSyntax,
   selectionToolbar,
   readOnly,
+  editorEngine = 'typora',
   effectiveKeybindings,
   editorAreaRef,
   editorHostRef,
@@ -269,10 +272,12 @@ export default function EditorArea({
           nodes.push(
             <div
               // Include reloadNonce so an external-edit reload remounts the
-              // Crepe editor with the new content (the create effect only
-              // runs on mount). tab switches keep the same key → stay mounted.
-              key={`rich:${tab.id}:${tab.reloadNonce}`}
-              className={`editor-scroll${paneClass}${largeRich ? ' hm-cv' : ''}${isSourceRichSplit ? ' hm-source-rich-right' : ''}`}
+              // editor with the new content (the create effect only runs on
+              // mount). Include the engine name so a settings switch remounts
+              // every pane under the new engine. Tab switches keep the same
+              // key → stay mounted.
+              key={`rich:${tab.id}:${tab.reloadNonce}:${editorEngine}`}
+              className={`editor-scroll hm-engine-${editorEngine}${paneClass}${largeRich ? ' hm-cv' : ''}${isSourceRichSplit ? ' hm-source-rich-right' : ''}`}
               ref={setEditorHost}
               // Source mode replaces only the LEFT (active) pane with its
               // textarea; the right document of a two-document split stays
@@ -282,51 +287,88 @@ export default function EditorArea({
               onFocusCapture={() => onPaneFocus(isSourceRichSplit ? null : 'rich')}
               onMouseDownCapture={() => onPaneFocus(isSourceRichSplit ? null : 'rich')}
             >
-              <Suspense fallback={editorChunkFallback}>
-              <Editor
-                tabId={`${tab.id}:${tab.reloadNonce}`}
-                initialContent={tab.content}
-                docPath={tab.path}
-                imageUploadCommand={imageUploadCommand}
-                spellcheck={spellcheck}
-                inlineMathDeleteMode={inlineMathDeleteMode}
-                markdownSyntax={markdownSyntax}
-                selectionToolbar={selectionToolbar}
-                readOnly={readOnly || isSourceRichSplit}
-                effectiveKeybindings={effectiveKeybindings}
-                onChange={(md, isInitial) => updateContent(tab.id, md, isInitial)}
-                onToggleSourceRichSplit={isSourceRichSplit ? undefined : onToggleSourceRichSplit}
-                onRichEditPending={() => markRichEditPending(tab.id)}
-                onReady={(api) => {
-                  registerEditorApi(tab.id, api)
-                  // One restore per mount generation: the open-time position
-                  // (restoreNonce 0) or an external-change reload (#158).
-                  const restoreKey = `${tab.id}:${tab.reloadNonce}`
-                  if (tab.restoreOffset != null && (tab.restoreNonce ?? 0) === tab.reloadNonce && !restoredDocPosRef.current.has(restoreKey)) {
-                    restoredDocPosRef.current.add(restoreKey)
-                    // Set the caret without scrolling/focusing (a reading open
-                    // must not steal focus), then restore the saved viewport.
-                    try {
-                      api.restoreMarkdownOffset?.(tab.restoreOffset, false)
-                    } catch {
-                      // A stale offset just leaves the caret at the default spot.
+              {editorEngine === 'milkdown' ? (
+                <Suspense fallback={editorChunkFallback}>
+                <Editor
+                  tabId={`${tab.id}:${tab.reloadNonce}`}
+                  initialContent={tab.content}
+                  docPath={tab.path}
+                  imageUploadCommand={imageUploadCommand}
+                  spellcheck={spellcheck}
+                  inlineMathDeleteMode={inlineMathDeleteMode}
+                  markdownSyntax={markdownSyntax}
+                  selectionToolbar={selectionToolbar}
+                  readOnly={readOnly || isSourceRichSplit}
+                  effectiveKeybindings={effectiveKeybindings}
+                  onChange={(md, isInitial) => updateContent(tab.id, md, isInitial)}
+                  onToggleSourceRichSplit={isSourceRichSplit ? undefined : onToggleSourceRichSplit}
+                  onRichEditPending={() => markRichEditPending(tab.id)}
+                  onReady={(api) => {
+                    registerEditorApi(tab.id, api)
+                    // One restore per mount generation: the open-time position
+                    // (restoreNonce 0) or an external-change reload (#158).
+                    const restoreKey = `${tab.id}:${tab.reloadNonce}`
+                    if (tab.restoreOffset != null && (tab.restoreNonce ?? 0) === tab.reloadNonce && !restoredDocPosRef.current.has(restoreKey)) {
+                      restoredDocPosRef.current.add(restoreKey)
+                      // Set the caret without scrolling/focusing (a reading open
+                      // must not steal focus), then restore the saved viewport.
+                      try {
+                        api.restoreMarkdownOffset?.(tab.restoreOffset, false)
+                      } catch {
+                        // A stale offset just leaves the caret at the default spot.
+                      }
+                      const restoreScroller = editorHosts.current[tab.id]
+                      if (tab.restoreScrollTop) {
+                        // Synchronous set: requestAnimationFrame is throttled in
+                        // background windows, and the editor host is already laid
+                        // out by the time onReady fires.
+                        if (restoreScroller) restoreScroller.scrollTop = tab.restoreScrollTop
+                      }
                     }
-                    const restoreScroller = editorHosts.current[tab.id]
-                    if (tab.restoreScrollTop) {
-                      // Synchronous set: requestAnimationFrame is throttled in
-                      // background windows, and the editor host is already laid
-                      // out by the time onReady fires.
-                      if (restoreScroller) restoreScroller.scrollTop = tab.restoreScrollTop
+                  }}
+                  onActiveBlock={(id) => {
+                    if (tab.id === activeIdRef.current) setActiveBlock(id)
+                  }}
+                  onStructureChange={() => setRichDocVersion((v) => v + 1)}
+                  onLoadingChange={(loading) => setTabRichLoading(tab.id, loading)}
+                />
+                </Suspense>
+              ) : (
+                <TyporaEditor
+                  tabId={`${tab.id}:${tab.reloadNonce}`}
+                  initialContent={tab.content}
+                  docPath={tab.path}
+                  imageUploadCommand={imageUploadCommand}
+                  spellcheck={spellcheck}
+                  readOnly={readOnly || isSourceRichSplit}
+                  markdownSyntax={markdownSyntax}
+                  effectiveKeybindings={effectiveKeybindings}
+                  onChange={(md, isInitial) => updateContent(tab.id, md, isInitial)}
+                  onRichEditPending={() => markRichEditPending(tab.id)}
+                  onReady={(api) => {
+                    registerEditorApi(tab.id, api)
+                    // 同 Milkdown 分支:每代际恢复一次光标/视口位置
+                    const restoreKey = `${tab.id}:${tab.reloadNonce}`
+                    if (tab.restoreOffset != null && (tab.restoreNonce ?? 0) === tab.reloadNonce && !restoredDocPosRef.current.has(restoreKey)) {
+                      restoredDocPosRef.current.add(restoreKey)
+                      try {
+                        api.restoreMarkdownOffset?.(tab.restoreOffset, false)
+                      } catch {
+                        /* 越界偏移落在默认位置 */
+                      }
+                      const restoreScroller = editorHosts.current[tab.id]
+                      if (tab.restoreScrollTop && restoreScroller) {
+                        restoreScroller.scrollTop = tab.restoreScrollTop
+                      }
                     }
-                  }
-                }}
-                onActiveBlock={(id) => {
-                  if (tab.id === activeIdRef.current) setActiveBlock(id)
-                }}
-                onStructureChange={() => setRichDocVersion((v) => v + 1)}
-                onLoadingChange={(loading) => setTabRichLoading(tab.id, loading)}
-              />
-              </Suspense>
+                  }}
+                  onActiveBlock={(id) => {
+                    if (tab.id === activeIdRef.current) setActiveBlock(id)
+                  }}
+                  onStructureChange={() => setRichDocVersion((v) => v + 1)}
+                  onLoadingChange={() => {}}
+                />
+              )}
             </div>
           )
         }
