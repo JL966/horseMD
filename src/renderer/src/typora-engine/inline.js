@@ -63,6 +63,14 @@ export function tokenizeInline(src, opts = {}) {
     if (++steps > MAX_STEPS) { plain += src.slice(i); break; }
     const c = src[i];
 
+    // 软换行(段内单 \n): Typora 契约为 md-softbreak span(默认 ignoreLineBreak=false)
+    if (c === '\n') {
+      flush();
+      tokens.push({ type: 'softbreak' });
+      i++;
+      continue;
+    }
+
     // 转义
     if (c === '\\' && i + 1 < n && /[`*_[\]()#.!~^=$\\<>"&|+-]/.test(src[i + 1])) {
       flush();
@@ -301,70 +309,87 @@ function renderChildren(tokens, frag, opts) {
   for (const t of tokens) frag.appendChild(renderToken(t, opts));
 }
 
+/** Typora 契约: 成对语法 = 外层 wrapper(md-inline + md-pair-s)承载 meta,语义元素居中 */
+function pairWrapper(inlineType, semanticTag, mark, childrenTokens, opts, extraMetaCls) {
+  const w = el('span', 'md-pair-s', inlineType);
+  const before = spanMeta(mark);
+  before.classList.add('md-before');
+  if (extraMetaCls) before.classList.add(...extraMetaCls);
+  w.appendChild(before);
+  const sem = document.createElement(semanticTag);
+  renderChildren(childrenTokens, sem, opts);
+  w.appendChild(sem);
+  const after = spanMeta(mark);
+  after.classList.add('md-after');
+  if (extraMetaCls) after.classList.add(...extraMetaCls);
+  w.appendChild(after);
+  return w;
+}
+
 function renderToken(t, opts = {}) {
   switch (t.type) {
-    case 'text':
-      return textNode(t.text);
+    case 'text': {
+      const s = el('span', 'md-plain', 'plain');
+      s.textContent = t.text;
+      return s;
+    }
+
+    case 'softbreak': {
+      const s = el('span', 'md-softbreak', 'softbreak');
+      s.textContent = '\n';
+      return s;
+    }
 
     case 'escape': {
       const w = el('span', '', 'escape');
-      w.appendChild(spanMeta('\\'));
+      const m = spanMeta('\\');
+      m.classList.add('md-before');
+      w.appendChild(m);
       const p = el('span', 'md-plain');
       p.textContent = t.char;
       w.appendChild(p);
       return w;
     }
 
-    case 'strong': {
-      const s = el('strong', '', 'strong');
-      s.appendChild(spanMeta(t.mark));
-      renderChildren(t.children, s, opts);
-      s.appendChild(spanMeta(t.mark));
-      return s;
-    }
+    case 'strong':
+      return pairWrapper('strong', 'strong', t.mark, t.children, opts);
 
-    case 'em': {
-      const s = el('em', '', 'em');
-      s.appendChild(spanMeta(t.mark));
-      renderChildren(t.children, s, opts);
-      s.appendChild(spanMeta(t.mark));
-      return s;
-    }
+    case 'em':
+      return pairWrapper('em', 'em', t.mark, t.children, opts);
 
-    case 'del': {
-      const s = el('del', '', 'del');
-      s.appendChild(spanMeta(t.mark));
-      renderChildren(t.children, s, opts);
-      s.appendChild(spanMeta(t.mark));
-      return s;
-    }
+    case 'del':
+      return pairWrapper('del', 'del', t.mark, t.children, opts);
 
-    case 'mark': {
-      const s = el('mark', '', 'mark');
-      s.appendChild(spanMeta(t.mark));
-      renderChildren(t.children, s, opts);
-      s.appendChild(spanMeta(t.mark));
-      return s;
-    }
+    case 'mark':
+      return pairWrapper('mark', 'mark', t.mark, t.children, opts);
 
     case 'u': {
-      const s = el('u', '', 'u');
-      s.appendChild(spanMeta(t.rawHead));
-      const p = el('span', 'md-plain');
-      p.textContent = t.content;
-      s.appendChild(p);
-      s.appendChild(spanMeta(t.rawTail));
-      return s;
+      const w = el('span', 'md-pair-s', 'underline');
+      const before = spanMeta(t.rawHead);
+      before.classList.add('md-before', 'md-raw-inline');
+      w.appendChild(before);
+      const u = document.createElement('u');
+      renderChildren([{ type: 'text', text: t.content }], u, opts);
+      w.appendChild(u);
+      const after = spanMeta(t.rawTail);
+      after.classList.add('md-after', 'md-raw-inline');
+      w.appendChild(after);
+      return w;
     }
 
     case 'code': {
-      const s = el('code', '', 'code');
-      s.appendChild(spanMeta(t.mark));
-      const p = el('span', 'md-plain');
-      p.textContent = t.content;
-      s.appendChild(p);
-      s.appendChild(spanMeta(t.mark));
-      return s;
+      const w = el('span', 'md-pair-s', 'code');
+      w.setAttribute('spellcheck', 'false');
+      const before = spanMeta(t.mark);
+      before.classList.add('md-before');
+      w.appendChild(before);
+      const code = document.createElement('code');
+      code.textContent = t.content;
+      w.appendChild(code);
+      const after = spanMeta(t.mark);
+      after.classList.add('md-after');
+      w.appendChild(after);
+      return w;
     }
 
     case 'math': {
@@ -378,8 +403,10 @@ function renderToken(t, opts = {}) {
     }
 
     case 'link': {
-      const w = el('span', 'md-link', 'link');
-      const head = el('span', 'md-content');
+      // Typora 契约: wrapper = md-meta-i-c md-link;[ 是 md-meta md-before md-meta-i,
+      // ]( 是 md-meta md-before;URL = md-content md-url;title = md-content md-link-title;) = md-meta md-after
+      const w = el('span', 'md-meta-i-c md-link', 'link');
+      const head = el('span', 'md-meta md-before md-meta-i');
       head.textContent = t.rawHead;
       w.appendChild(head);
       const a = document.createElement('a');
@@ -388,8 +415,23 @@ function renderToken(t, opts = {}) {
       if (t.title) a.setAttribute('title', t.title);
       renderChildren(tokenizeInline(t.label, opts), a, opts);
       w.appendChild(a);
-      const tail = el('span', 'md-content');
-      tail.textContent = '](' + t.href + (t.title ? ' "' + t.title + '"' : '') + ')';
+      const mid = el('span', 'md-meta md-before');
+      mid.textContent = '](';
+      w.appendChild(mid);
+      const url = el('span', 'md-content md-url');
+      url.setAttribute('spellcheck', 'false');
+      url.textContent = t.href;
+      w.appendChild(url);
+      if (t.title) {
+        const sp = el('span', 'md-meta');
+        sp.textContent = ' ';
+        w.appendChild(sp);
+        const ti = el('span', 'md-content md-link-title');
+        ti.textContent = '"' + t.title + '"';
+        w.appendChild(ti);
+      }
+      const tail = el('span', 'md-meta md-after');
+      tail.textContent = ')';
       w.appendChild(tail);
       return w;
     }
@@ -444,21 +486,11 @@ function renderToken(t, opts = {}) {
       return w;
     }
 
-    case 'sub': {
-      const s = el('sub', '', 'sub');
-      s.appendChild(spanMeta(t.mark));
-      renderChildren(t.children, s, opts);
-      s.appendChild(spanMeta(t.mark));
-      return s;
-    }
+    case 'sub':
+      return pairWrapper('sub', 'sub', t.mark, t.children, opts);
 
-    case 'sup': {
-      const s = el('sup', '', 'sup');
-      s.appendChild(spanMeta(t.mark));
-      renderChildren(t.children, s, opts);
-      s.appendChild(spanMeta(t.mark));
-      return s;
-    }
+    case 'sup':
+      return pairWrapper('sup', 'sup', t.mark, t.children, opts);
 
     case 'entity': {
       const w = el('span', 'md-entity', 'entity');
@@ -478,8 +510,11 @@ function renderToken(t, opts = {}) {
       return w;
     }
 
-    default:
-      return textNode(t.text || '');
+    default: {
+      const s = el('span', 'md-plain', 'plain');
+      s.textContent = t.text || '';
+      return s;
+    }
   }
 }
 

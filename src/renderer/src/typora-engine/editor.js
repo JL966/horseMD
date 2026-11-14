@@ -554,8 +554,14 @@ export class Editor {
       }
     }
 
-    // md-expand: 光标所在最内层 [md-inline]
-    const inlineEl = node.closest && node.closest('[md-inline]');
+    // md-expand: 光标所在内联单元(Typora 语义)
+    //  - 顶层 plain span 自身展开
+    //  - pair(wrapper md-pair-s)内部任何位置(含内层 plain)→ 展开 wrapper
+    let inlineEl = node.closest && node.closest('[md-inline]');
+    if (inlineEl && inlineEl.getAttribute('md-inline') === 'plain') {
+      const outer = inlineEl.parentElement && inlineEl.parentElement.closest('[md-inline]');
+      if (outer && this.container.contains(outer)) inlineEl = outer;
+    }
     const target = (inlineEl && this.container.contains(inlineEl) &&
       !(inlineEl.closest('[contenteditable="false"]') && !inlineEl.closest('.md-rawblock-input'))) ? inlineEl : null;
     if (this.expandEl !== target) {
@@ -1352,7 +1358,7 @@ export class Editor {
       const selNode = window.getSelection().anchorNode;
       const el = selNode && (selNode.nodeType === 3 ? selNode.parentElement : selNode);
       const wrap = el && el.closest &&
-        el.closest('[md-inline="strong"],[md-inline="em"],[md-inline="del"],[md-inline="mark"],[md-inline="code"],[md-inline="u"]');
+        el.closest('[md-inline="strong"],[md-inline="em"],[md-inline="del"],[md-inline="mark"],[md-inline="code"],[md-inline="underline"]');
       if (wrap && info.host.contains(wrap)) {
         const metas = wrap.querySelectorAll(':scope > .md-meta');
         if (metas.length >= 2) {

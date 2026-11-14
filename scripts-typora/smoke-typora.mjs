@@ -140,11 +140,19 @@ try {
   const expanded = await app.evaluate(`(() => {
     ${V}
     const w = visibleWrite()
-    const strong = w.querySelector('strong')
-    const meta = strong.querySelector('.md-meta')
-    return { expand: strong.classList.contains('md-expand'), metaShown: getComputedStyle(meta).display !== 'none' }
+    // Typora 契约: md-expand 打在外层 md-pair-s wrapper 上, meta 是 wrapper 的直接子元素
+    const wrap = w.querySelector('[md-inline="strong"]')
+    const strong = wrap.querySelector('strong')
+    const meta = wrap.querySelector(':scope > .md-meta')
+    return {
+      wrapExpand: wrap.classList.contains('md-expand'),
+      expand: wrap.classList.contains('md-expand'),
+      metaShown: meta ? getComputedStyle(meta).display !== 'none' : false,
+      metaCls: meta ? meta.className : null,
+      plainWrapped: !!strong.querySelector('span.md-plain')
+    }
   })()`)
-  check('光标进入内联样式 → md-expand 显示语法字符', expanded.expand && expanded.metaShown, JSON.stringify(expanded))
+  check('光标进入内联样式 → wrapper md-expand 显示语法字符(Typora 契约)', expanded.expand && expanded.metaShown && expanded.plainWrapped && /md-before/.test(expanded.metaCls), JSON.stringify(expanded))
 
   // 3. 打字转换: 首个直接子段落清空后输入 "# 标题测试" → 变 h1
   const firstParaPoint = await app.evaluate(`(() => {

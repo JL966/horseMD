@@ -322,14 +322,18 @@ body.hm-has-custom-theme .editor-scroll.hm-engine-typora {
   width: auto;
 }
 :where(.hm-typora-engine) .md-expand-on-selection .md-meta { display: inline; }
+/* 实体/上下标: meta 在 md-pair-s wrapper 内, 隐藏但占位为 0(Typora 同款) */
 :where(.hm-typora-engine) .md-entity > .md-meta,
-:where(.hm-typora-engine) sub > .md-meta,
-:where(.hm-typora-engine) sup > .md-meta {
+:where(.hm-typora-engine) [md-inline="sub"] > .md-meta,
+:where(.hm-typora-engine) [md-inline="sup"] > .md-meta {
   display: inline-block;
   width: 0;
   opacity: 0;
 }
 :where(.hm-typora-engine) .md-plain { white-space: pre-wrap; }
+/* 软换行(段内单 \n): 只是文本换行, 无额外样式; md-raw-inline 的 meta(如 <u>)保持等宽感 */
+:where(.hm-typora-engine) .md-softbreak { white-space: pre-wrap; }
+:where(.hm-typora-engine) .md-raw-inline { font-family: var(--monospace); }
 
 /* 链接/图片 */
 :where(.hm-typora-engine) [md-inline="link"] > a { color: var(--link-color); }
